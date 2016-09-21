@@ -1,0 +1,62 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=16
+#PBS -l walltime=96:00:00
+#PBS -N satsuma
+#PBS -o QUERY.vs.TARGET_output
+#PBS -e QUERY.vs.TARGET_error
+
+
+# Die if any variables are used that have not been declared
+set -u
+
+# Query and target species names (these will be replaced with the actual names by the build_pbs.sh script)
+query="QUERY"
+target="TARGET"
+
+# Directory containing one fasta file for each entry in the query genome fasta file
+datadir=split-$query
+
+# Change to the compute node working directory
+cd $PBS_O_WORKDIR
+
+# File containing the filenames for this target that have been processed
+proclist=${target}_proclist
+
+# Create file if it does not already exist
+touch $proclist
+
+# Create output folder for the query against this target
+# This folder will contain one subfolder for each entry sequence in the query genome
+outdir=$query.vs.${target}
+
+# Make output directory if it does not already exist
+mkdir -p $outdir
+
+# Loop through every sequence in the query genome
+ls $datadir/xxx*fasta |
+while read file
+do
+    # Get a unique id for the current file
+    base=`basename $file`
+    # Only process the sequence if it has not already been done
+    if [[ `grep -c $file $proclist` -eq 0 ]]
+    then
+        rm -rf $outdir/$base
+        mkdir $outdir/$base
+        # Run Satsuma with default settings
+        $PWD/satsuma/SatsumaSynteny \
+            -q $file \
+            -t data/$target.fna \
+            -n 16 \
+            -o $outdir/$base
+        # Did the program complete successfully
+        if [[ $? -eq 0 ]]
+        then
+            # if successful, add this filename to the completed jobs list
+            echo $file >> $proclist
+        fi
+    else
+        # if the job has already been done, tell the user we are skipping the file
+        echo "skipping $file"
+    fi
+done
