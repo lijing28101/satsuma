@@ -3,14 +3,9 @@
 #PBS -l walltime=96:00:00
 #PBS -N satsuma
 
+
 # Die if any variables are used that have not been declared
 set -u
-
-# environmental variable needed by Satsuma
-export SATSUMA2_PATH=/data019/LAS/jingli/satsuma2-build/bin
-
-# path to satsuma executable
-satsuma=../satsuma2-build/bin/SatsumaSynteny
 
 # Query and target species names (these will be replaced with the actual names by the build_pbs.sh script)
 query="QUERY"
@@ -27,13 +22,13 @@ touch $proclist
 
 # Create output folder for the query against this target
 # This folder will contain one subfolder for each entry sequence in the query genome
-outdir=${target}.vs.${query}
+outdir=${query}.vs.${target}
 
 # Make output directory if it does not already exist
 mkdir -p $outdir
 
 # Loop through every sequence in the query genome
-ls $datadir/xxx*fasta |
+ls $datadir/*fasta |
 while read file
 do
     # Get a unique id for the current file
@@ -46,9 +41,8 @@ do
         # Run Satsuma with default settings
         $PWD/satsuma/SatsumaSynteny \
             -t $file \
-            -q data/${query}.fna \
-            -n 15 \
-	        -dups 1 \
+            -q data/$query.fna \
+            -n 16 \
             -o $outdir/$base
         # Did the program complete successfully
         if [[ $? -eq 0 ]]
@@ -61,3 +55,5 @@ do
         echo "skipping $file"
     fi
 done
+
+wait
